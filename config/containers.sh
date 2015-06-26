@@ -3,6 +3,9 @@
 # set -o xtrace (Show verbose command output for debugging.)
 # set +o xtrace (To revert to normal.)
 
+# Define project name.
+PROJECTNAME="docker"
+
 SCRIPTPATH=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 CONFDIR=$SCRIPTPATH
 ROOTDIR=`dirname $CONFDIR`
@@ -10,16 +13,22 @@ ROOTDIR=`dirname $CONFDIR`
 REGISTRY="agolub"
 
 VER_BASE="latest"
+VER_DEV_BASE="latest"
 VER_DEV_BACKEND="latest"
 VER_DEV_WEBSERVER="latest"
 
 
-build() {
-    cd $CONFDIR/docker-$1
-    docker build -t $REGISTRY/$1:$2 .
+#--------------------------------------------------------------------------------#
+# Default base image.
+#--------------------------------------------------------------------------------#
 
-    rm -rf $CONFDIR/docker-$1/requirements
-    cd $CONFDIR
+build_base() {
+    NAME=base
+    VERSION=$VER_BASE
+
+    sed -i '' 's/:VER_BASE/:'"$VER_BASE"'/g' $CONFDIR/$NAME/Dockerfile
+    build $NAME $VERSION
+    sed -i '' 's/:'"$VER_BASE"'/:VER_BASE/g' $CONFDIR/$NAME/Dockerfile
 }
 
 
@@ -27,31 +36,55 @@ build() {
 # Development related build scripts.
 #--------------------------------------------------------------------------------#
 
-build_base() {
-    NAME=base
-    VERSION=$VER_BASE
+# Project specific base image.
+build_dev_base() {
+    FROM_IMAGE=base
+    NAME=$PROJECTNAME-$FROM_IMAGE
+    VERSION=$VER_DEV_BASE
 
-    sed -i '' 's/:VER_BASE/:'"$VER_BASE"'/g' $CONFDIR/docker-$NAME/Dockerfile
+    sed -i '' 's/:VERSION/:'"$VERSION"'/g' $CONFDIR/$NAME/Dockerfile
+    sed -i '' 's/REGISTRY/'"$REGISTRY"'/g' $CONFDIR/$NAME/Dockerfile
+    sed -i '' 's/FROM_IMAGE/'"$FROM_IMAGE"'/g' $CONFDIR/$NAME/Dockerfile
+
     build $NAME $VERSION
-    sed -i '' 's/:'"$VER_BASE"'/:VER_BASE/g' $CONFDIR/docker-$NAME/Dockerfile
+
+    sed -i '' 's/:'"$VERSION"'/:VERSION/g' $CONFDIR/$NAME/Dockerfile
+    sed -i '' 's/'"$REGISTRY"'/REGISTRY/g' $CONFDIR/$NAME/Dockerfile
+    sed -i '' 's/'"$FROM_IMAGE"'/FROM_IMAGE/g' $CONFDIR/$NAME/Dockerfile
 }
 
+# Project specific application image.
 build_dev_backend() {
-    NAME=backend
+    FROM_IMAGE=$PROJECTNAME-base
+    NAME=$PROJECTNAME-backend
     VERSION=$VER_DEV_BACKEND
 
-    sed -i '' 's/:VER_BASE/:'"$VER_BASE"'/g' $CONFDIR/docker-$NAME/Dockerfile
+    sed -i '' 's/:VERSION/:'"$VERSION"'/g' $CONFDIR/$NAME/Dockerfile
+    sed -i '' 's/REGISTRY/'"$REGISTRY"'/g' $CONFDIR/$NAME/Dockerfile
+    sed -i '' 's/FROM_IMAGE/'"$FROM_IMAGE"'/g' $CONFDIR/$NAME/Dockerfile
+
     build $NAME $VERSION
-    sed -i '' 's/:'"$VER_BASE"'/:VER_BASE/g' $CONFDIR/docker-$NAME/Dockerfile
+
+    sed -i '' 's/:'"$VERSION"'/:VERSION/g' $CONFDIR/$NAME/Dockerfile
+    sed -i '' 's/'"$REGISTRY"'/REGISTRY/g' $CONFDIR/$NAME/Dockerfile
+    sed -i '' 's/'"$FROM_IMAGE"'/FROM_IMAGE/g' $CONFDIR/$NAME/Dockerfile
 }
 
+# Project specific webserver image.
 build_dev_webserver() {
-    NAME=webserver
+    FROM_IMAGE=$PROJECTNAME-base
+    NAME=$PROJECTNAME-webserver
     VERSION=$VER_DEV_WEBSERVER
 
-    sed -i '' 's/:VER_BASE/:'"$VER_BASE"'/g' $CONFDIR/docker-$NAME/Dockerfile
+    sed -i '' 's/:VERSION/:'"$VERSION"'/g' $CONFDIR/$NAME/Dockerfile
+    sed -i '' 's/REGISTRY/'"$REGISTRY"'/g' $CONFDIR/$NAME/Dockerfile
+    sed -i '' 's/FROM_IMAGE/'"$FROM_IMAGE"'/g' $CONFDIR/$NAME/Dockerfile
+
     build $NAME $VERSION
-    sed -i '' 's/:'"$VER_BASE"'/:VER_BASE/g' $CONFDIR/docker-$NAME/Dockerfile
+
+    sed -i '' 's/:'"$VERSION"'/:VERSION/g' $CONFDIR/$NAME/Dockerfile
+    sed -i '' 's/'"$REGISTRY"'/REGISTRY/g' $CONFDIR/$NAME/Dockerfile
+    sed -i '' 's/'"$FROM_IMAGE"'/FROM_IMAGE/g' $CONFDIR/$NAME/Dockerfile
 }
 
 
@@ -70,37 +103,47 @@ run_base() {
 }
 
 run_postgres() {
-    docker run --name postgres -e POSTGRES_PASSWORD=postgres -d postgres
+    docker run --name $PROJECTNAME-postgres -e POSTGRES_PASSWORD=postgres -d postgres
 }
 
 run_dev_backend() {
-    NAME=backend
+    NAME=$PROJECTNAME-backend
 
     ls $ROOTDIR/app
 
     mkdir -p $ROOTDIR/logs
 
     docker run \
-        --link postgres:postgres \
+        --link $PROJECTNAME-postgres:postgres \
         -v $ROOTDIR/app:/app \
         -v $ROOTDIR/logs:/logs \
         -d \
         -h $NAME \
         -p 9000:9000 \
         --name $NAME \
-        $REGISTRY/backend:$VER_DEV_BACKEND
+        $REGISTRY/$PROJECTNAME-backend:$VER_DEV_BACKEND
 }
 
 run_dev_webserver() {
-    NAME=webserver
+    NAME=$PROJECTNAME-webserver
 
     docker run \
-        --link backend:backend \
-        --volumes-from backend \
+        --link $PROJECTNAME-backend:backend \
+        --volumes-from $PROJECTNAME-backend \
         --name $NAME \
         -d \
         -p 80:80 \
-        $REGISTRY/webserver:$VER_DEV_WEBSERVER
+        $REGISTRY/$PROJECTNAME-webserver:$VER_DEV_WEBSERVER
+}
+
+
+#--------------------------------------------------------------------------------#
+# Utilities.
+#--------------------------------------------------------------------------------#
+
+build() {
+    cd $CONFDIR/$1
+    docker build -t $REGISTRY/$1:$2 .
 }
 
 stop_remove() {

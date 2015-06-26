@@ -1,4 +1,4 @@
-FROM agolub/base:VER_BASE
+FROM REGISTRY/FROM_IMAGE:VERSION
 MAINTAINER Artem Golub <artemgolub@gmail.com>
 
 ENTRYPOINT cp /app/config/nginx.conf /etc/nginx/nginx.conf && \
