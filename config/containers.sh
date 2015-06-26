@@ -31,7 +31,6 @@ build_base() {
     sed -i '' 's/:'"$VER_BASE"'/:VER_BASE/g' $CONFDIR/$NAME/Dockerfile
 }
 
-
 #--------------------------------------------------------------------------------#
 # Development related build scripts.
 #--------------------------------------------------------------------------------#
@@ -42,15 +41,7 @@ build_dev_base() {
     NAME=$PROJECTNAME-$FROM_IMAGE
     VERSION=$VER_DEV_BASE
 
-    sed -i '' 's/:VERSION/:'"$VERSION"'/g' $CONFDIR/$NAME/Dockerfile
-    sed -i '' 's/REGISTRY/'"$REGISTRY"'/g' $CONFDIR/$NAME/Dockerfile
-    sed -i '' 's/FROM_IMAGE/'"$FROM_IMAGE"'/g' $CONFDIR/$NAME/Dockerfile
-
-    build $NAME $VERSION
-
-    sed -i '' 's/:'"$VERSION"'/:VERSION/g' $CONFDIR/$NAME/Dockerfile
-    sed -i '' 's/'"$REGISTRY"'/REGISTRY/g' $CONFDIR/$NAME/Dockerfile
-    sed -i '' 's/'"$FROM_IMAGE"'/FROM_IMAGE/g' $CONFDIR/$NAME/Dockerfile
+    builder VERSION FROM_IMAGE 
 }
 
 # Project specific application image.
@@ -59,15 +50,7 @@ build_dev_backend() {
     NAME=$PROJECTNAME-backend
     VERSION=$VER_DEV_BACKEND
 
-    sed -i '' 's/:VERSION/:'"$VERSION"'/g' $CONFDIR/$NAME/Dockerfile
-    sed -i '' 's/REGISTRY/'"$REGISTRY"'/g' $CONFDIR/$NAME/Dockerfile
-    sed -i '' 's/FROM_IMAGE/'"$FROM_IMAGE"'/g' $CONFDIR/$NAME/Dockerfile
-
-    build $NAME $VERSION
-
-    sed -i '' 's/:'"$VERSION"'/:VERSION/g' $CONFDIR/$NAME/Dockerfile
-    sed -i '' 's/'"$REGISTRY"'/REGISTRY/g' $CONFDIR/$NAME/Dockerfile
-    sed -i '' 's/'"$FROM_IMAGE"'/FROM_IMAGE/g' $CONFDIR/$NAME/Dockerfile
+    builder VERSION FROM_IMAGE 
 }
 
 # Project specific webserver image.
@@ -76,15 +59,7 @@ build_dev_webserver() {
     NAME=$PROJECTNAME-webserver
     VERSION=$VER_DEV_WEBSERVER
 
-    sed -i '' 's/:VERSION/:'"$VERSION"'/g' $CONFDIR/$NAME/Dockerfile
-    sed -i '' 's/REGISTRY/'"$REGISTRY"'/g' $CONFDIR/$NAME/Dockerfile
-    sed -i '' 's/FROM_IMAGE/'"$FROM_IMAGE"'/g' $CONFDIR/$NAME/Dockerfile
-
-    build $NAME $VERSION
-
-    sed -i '' 's/:'"$VERSION"'/:VERSION/g' $CONFDIR/$NAME/Dockerfile
-    sed -i '' 's/'"$REGISTRY"'/REGISTRY/g' $CONFDIR/$NAME/Dockerfile
-    sed -i '' 's/'"$FROM_IMAGE"'/FROM_IMAGE/g' $CONFDIR/$NAME/Dockerfile
+    builder VERSION FROM_IMAGE 
 }
 
 
@@ -146,6 +121,18 @@ build() {
     docker build -t $REGISTRY/$1:$2 .
 }
 
+builder() {
+    sed -i '' 's/:VERSION/:'"$1"'/g' $CONFDIR/$NAME/Dockerfile
+    sed -i '' 's/REGISTRY/'"$REGISTRY"'/g' $CONFDIR/$NAME/Dockerfile
+    sed -i '' 's/FROM_IMAGE/'"$2"'/g' $CONFDIR/$NAME/Dockerfile
+
+    build $NAME $VERSION
+
+    sed -i '' 's/:'"$1"'/:VERSION/g' $CONFDIR/$NAME/Dockerfile
+    sed -i '' 's/'"$REGISTRY"'/REGISTRY/g' $CONFDIR/$NAME/Dockerfile
+    sed -i '' 's/'"$2"'/FROM_IMAGE/g' $CONFDIR/$NAME/Dockerfile
+}
+
 stop_remove() {
     # @param $1: name of container to stop and remove
     if [ `docker ps | grep $1 | wc -l` -ne 0 ]; then
@@ -156,3 +143,5 @@ stop_remove() {
     fi
     sleep 2
 }
+
+
